@@ -177,65 +177,76 @@ namespace Registration
                     // Check if the cells collection is not null
                     if (row.Cells.Count >= 6)
                     {
+                        SetDropDownSelectedValues(ddlState, row.Cells[2].Text);
+                        PopulateCities(row.Cells[2].Text);  // Assuming state information is in the third column (adjust if necessary)
+
+                        // Set the initial value of ddlCity and populate cities
+                        SetDropDownSelectedValues(ddlCity, row.Cells[3].Text); 
+
+                        // Now, set other TextBox values
                         txtName.Text = row.Cells[0].Text;
                         txtId.Text = row.Cells[1].Text;
-
-                        // Check if DataKeys collection is not null
-                        if (GridView1.DataKeys != null)
-                        {
-                            // Check if DataKeys collection has the expected number of elements
-                            if (GridView1.DataKeys.Count > e.NewEditIndex)
-                            {
-                                // Fetch the actual state and city values from the GridView's DataKeys
-                                string stateId = GridView1.DataKeys[e.NewEditIndex]["state"].ToString();
-                                string cityId = row.Cells[3].Text;
-
-                                // Populate states based on the selected state
-                                PopulateStates();
-                                ddlState.SelectedValue = stateId;
-
-                                // Populate cities based on the selected state
-                                PopulateCities(stateId);
-                                ddlCity.SelectedValue = cityId;
-
-                                
-                                // Other logic as needed
-                            }
-                            else
-                            {
-                                // DataKeys collection does not have the expected number of elements
-                                // Log or handle the issue
-                                Response.Write("Error: DataKeys collection does not have the expected number of elements.");
-                            }
-                        }
-                        else
-                        {
-                            // DataKeys collection is null
-                            // Log or handle the issue
-                            Response.Write("Error: DataKeys collection is null.");
-                        }
                         txtAdd.Text = row.Cells[4].Text;
                         txtNum.Text = row.Cells[5].Text;
+
+                        // Save the index of the edited row in ViewState
+                        ViewState["EditingRow"] = e.NewEditIndex;
                     }
                 }
                 else
                 {
-                    // Log, handle, or display a message indicating that the index is out of range
                     Response.Write("Error: Index is out of range.");
                 }
             }
             catch (Exception ex)
             {
-                // Log or display the exception details
-                Response.Write("Error: " + ex.ToString());
+                // Log or handle the exception
+                Response.Write("Error: " + ex.Message);
             }
         }
+        /*private void SetDropDownSelectedValues(DropDownList ddl, string selectedValue)
+        {
+            // Find the ListItem by value and set it as selected
+            ListItem item = ddl.Items.FindByValue(selectedValue);
+            if (item != null)
+            {
+                // Clear existing selection only if it's not the same as the selected value
+                if (ddl.SelectedValue != selectedValue)
+                {
+                    ddl.ClearSelection();
+                }
 
+                item.Selected = true;
+            }
+        }*/
 
+        // CODE RUNNING AS EXPECTED
+        /*private void SetDropDownSelectedValues(DropDownList ddl, string selectedValue)
+        {
+            // Find the ListItem by value
+            ListItem item = ddl.Items.FindByValue(selectedValue);
 
+            // If the item is not found, add a default item with the stored value
+            if (item == null)
+            {
+                ddl.Items.Insert(0, new ListItem(selectedValue, selectedValue));
+                item = ddl.Items.FindByValue(selectedValue);
+            }
 
-        // Update
-        protected void btnUpdate_Click(object sender, EventArgs e)
+            // Set the found or added item as selected
+            if (item != null)
+            {
+                // Clear existing selection only if it's not the same as the selected value
+                if (ddl.SelectedValue != selectedValue)
+                {
+                    ddl.ClearSelection();
+                }
+
+                item.Selected = true;
+            }
+        }
+         
+         protected void btnUpdate_Click(object sender, EventArgs e)
         {
             try
             {
@@ -270,6 +281,82 @@ namespace Registration
                 {
                     Response.Write("<script>alert('Please select a row to update.')</script>");
                 }
+
+            }
+            catch (Exception ex)
+            {
+                Response.Write("Error: " + ex.ToString());
+            }
+        }
+*/
+        private void SetDropDownSelectedValues(DropDownList ddl, string selectedValue)
+        {
+            // Find the ListItem by value
+            ListItem item = ddl.Items.FindByValue(selectedValue);
+
+            // If the item is not found, add a default item with the stored value
+            if (item == null)
+            {
+                ddl.Items.Insert(0, new ListItem(selectedValue, selectedValue));
+                item = ddl.Items.FindByValue(selectedValue);
+            }
+
+            // Set the found or added item as selected
+            if (item != null)
+            {
+                // Clear existing selection only if it's not the same as the selected value
+                if (ddl.SelectedValue != selectedValue)
+                {
+                    ddl.ClearSelection();
+                }
+
+                item.Selected = true;
+            }
+        }
+
+
+        // Update
+
+        // Update
+        protected void btnUpdate_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (GridView1.EditIndex >= 0)
+                {
+                    using (SqlConnection _connection = new SqlConnection(ConfigurationManager.ConnectionStrings["dbconnection"].ConnectionString))
+                    {
+                        _connection.Open();
+
+                        string updateQuery = "UPDATE userreg SET name=@Name, state=@State, city=@City, address=@Address, number=@Number WHERE id=@Id";
+
+                        using (SqlCommand cmd = new SqlCommand(updateQuery, _connection))
+                        {
+                            cmd.Parameters.AddWithValue("@Name", txtName.Text);
+                            cmd.Parameters.AddWithValue("@Id", txtId.Text);
+                            cmd.Parameters.AddWithValue("@Address", txtAdd.Text);
+                            cmd.Parameters.AddWithValue("@Number", txtNum.Text);
+                            cmd.Parameters.AddWithValue("@State", ddlState.SelectedItem.Text);
+                            cmd.Parameters.AddWithValue("@City", ddlCity.SelectedItem.Text);
+
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    GridView1.EditIndex = -1;
+                    GetData();
+                    ClearFormFields();
+
+                    // Set the updated values in the dropdowns
+                    SetDropDownSelectedValues(ddlState, "- Select State -");
+                    SetDropDownSelectedValues(ddlCity, ddlCity.SelectedItem.Text);
+
+                    Response.Write("<script>alert('Student information updated successfully!')</script>");
+                }
+                else
+                {
+                    Response.Write("<script>alert('Please select a row to update.')</script>");
+                }
             }
             catch (Exception ex)
             {
@@ -277,6 +364,8 @@ namespace Registration
             }
         }
 
+
+        
         private void ClearFormFields()
         {
             txtName.Text = string.Empty;
@@ -284,6 +373,7 @@ namespace Registration
             ddlState.SelectedIndex = 0;
             txtAdd.Text = string.Empty;
             txtNum.Text = string.Empty;
+//            ddlState.Items.Add(new ListItem("- Select State -", ""));
             ddlCity.Items.Clear();
             ddlCity.Items.Add(new ListItem("- Select City -", ""));
         }
